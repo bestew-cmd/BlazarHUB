@@ -45,14 +45,19 @@ gui.IgnoreGuiInset = true
 gui.Parent = game:GetService("CoreGui")
 
 local watermark = Instance.new("TextLabel", gui)
-watermark.Size = UDim2.new(0, 300, 0, 30)
-watermark.Position = UDim2.new(0.5, -150, 0, 50)
-watermark.BackgroundTransparency = 1
-watermark.Text = "Blazar HUB | 60 fps"
-watermark.TextColor3 = Color3.fromRGB(200, 200, 210)
-watermark.Font = Enum.Font.GothamMedium
+watermark.Size = UDim2.new(0, 200, 0, 30)
+watermark.Position = UDim2.new(0.5, -100, 0, 50)
+watermark.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+watermark.BackgroundTransparency = 0.5
+watermark.Text = "Blazar HUB | ~ fps"
+watermark.TextColor3 = Color3.fromRGB(255, 255, 255)
+watermark.Font = Enum.Font.GothamBold
 watermark.TextSize = 14
-watermark.TextStrokeTransparency = 1
+watermark.TextStrokeTransparency = 0.5
+local wmCorner = Instance.new("UICorner", watermark)
+wmCorner.CornerRadius = UDim.new(0, 4)
+local wmStroke = Instance.new("UIStroke", watermark)
+wmStroke.Color = Color3.fromRGB(60, 60, 70)
 
 task.spawn(function()
     local frames = 0
@@ -615,7 +620,7 @@ function clearESP()
         local char = plr.Character
         if char then
             for _, c in ipairs(char:GetChildren()) do
-                if c:IsA("BillboardGui") and (c.Name == "esp_tag" or c.Name == "esp_box" or c.Name == "esp_skel") then c:Destroy() end
+                if c:IsA("BillboardGui") and (c.Name == "esp_tag" or c.Name == "esp_box") then c:Destroy() end
             end
         end
     end
