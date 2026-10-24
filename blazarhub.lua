@@ -1,3 +1,4 @@
+-- injector script — Drone War / Blazar HUB
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -35,16 +36,16 @@ local selectedPlayer = nil
 local bodyVel, bodyGyro, part
 local espCache = {}
 
--- ===== GUI Setup =====
 local gui = Instance.new("ScreenGui")
 gui.Name = "blazarhub_menu"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = game:GetService("CoreGui")
 
+-- Watermark
 local watermark = Instance.new("TextLabel", gui)
 watermark.Size = UDim2.new(0, 300, 0, 30)
-watermark.Position = UDim2.new(0.5, -150, 0, 50) -- top center
+watermark.Position = UDim2.new(0.5, -150, 0, 50)
 watermark.BackgroundTransparency = 1
 watermark.Text = "Blazar HUB | 60 fps"
 watermark.TextColor3 = Color3.fromRGB(200, 200, 210)
@@ -59,8 +60,7 @@ task.spawn(function()
         frames = frames + 1
         local now = tick()
         if now - lastTime >= 1 then
-            local fps = frames
-            watermark.Text = "Blazar HUB | " .. fps .. " fps"
+            watermark.Text = "Blazar HUB | " .. frames .. " fps"
             frames = 0
             lastTime = now
         end
@@ -118,7 +118,6 @@ for i, name in ipairs(tabs) do
         accent.BackgroundColor3 = Color3.fromRGB(100, 180, 255)
         accent.BorderSizePixel = 0
     end
-    
     tabButtons[name] = btn
 end
 
@@ -216,7 +215,6 @@ local function createBox(parent, titleText, yPos)
     
     local uiList = Instance.new("UIListLayout", inner)
     uiList.Padding = UDim.new(0, 8)
-    
     return inner
 end
 
@@ -322,12 +320,10 @@ local function addSlider(parent, labelText, minV, maxV, defaultV, callback)
     end)
 end
 
--- Populate General
 local gBox1 = createBox(pages.General, "Flight", 0)
 addToggle(gBox1, "Enable Flight (F5)", function(s) setFly(s) end)
 addSlider(gBox1, "Speed", 10, 2000, speed, function(v) speed = v end)
 
--- Populate Combat
 local cBox1 = createBox(pages.Combat, "Aimbot", 0)
 addToggle(cBox1, "Enable Aimbot", function(s) aimEnabled = s end)
 addSlider(cBox1, "FOV", 20, 400, aimFov, function(v) aimFov = v end)
@@ -364,14 +360,12 @@ addToggle(cBox2, "Enable Spinbot", function(s) spinEnabled = s end)
 addSlider(cBox2, "Spin Speed", 1, 60, spinSpeed, function(v) spinSpeed = v end)
 addToggle(cBox2, "Fling (all)", function(s) flingEnabled = s end)
 
--- Populate Visuals
-local vBox1 = createBox(pages.Visuals, "ESP", 0)
+local vBox1 = createBox(pages.Visuals, "ESP Settings", 0)
 addToggle(vBox1, "Enable ESP", function(s) espEnabled = s; if not s then clearESP() end end)
 addToggle(vBox1, "Team Check", function(s) espTeamCheck = s; if espEnabled then clearESP(); refreshESP() end end, true)
 addToggle(vBox1, "Show Names", function(s) espShowNames = s; if espEnabled then clearESP(); refreshESP() end end, true)
 addToggle(vBox1, "Show Distance", function(s) espShowDist = s; if espEnabled then clearESP(); refreshESP() end end, false)
 
--- Populate Misc
 local mBox1 = createBox(pages.Misc, "Movement", 0)
 addToggle(mBox1, "NoClip", function(s) noclipEnabled = s end)
 addToggle(mBox1, "Speed Walk", function(s) setSpeedWalk(s) end)
@@ -483,7 +477,6 @@ kickInput.FocusLost:Connect(function()
 end)
 createSmallBtn(mBox3, "Kick", 0, 60, function() lp:Kick(kickMessage) end).Size = UDim2.new(0, 60, 0, 24)
 
--- Logic
 tabButtons.Exit.MouseButton1Click:Connect(function() shutdown() end)
 for n, b in pairs(tabButtons) do
     if n ~= "Exit" then
@@ -592,27 +585,21 @@ local function removeESP(plr)
     local hl = espCache[plr]
     if hl then hl:Destroy() end
     espCache[plr] = nil
-    -- remove nametags
     local char = plr.Character
     if char then
         for _, c in ipairs(char:GetChildren()) do
-            if c:IsA("BillboardGui") and c.Name == "esp_tag" then
-                c:Destroy()
-            end
+            if c:IsA("BillboardGui") and c.Name == "esp_tag" then c:Destroy() end
         end
     end
 end
 
 function clearESP()
     for plr in pairs(espCache) do removeESP(plr) end
-    -- clear all tags
     for _, plr in ipairs(Players:GetPlayers()) do
         local char = plr.Character
         if char then
             for _, c in ipairs(char:GetChildren()) do
-                if c:IsA("BillboardGui") and c.Name == "esp_tag" then
-                    c:Destroy()
-                end
+                if c:IsA("BillboardGui") and c.Name == "esp_tag" then c:Destroy() end
             end
         end
     end
@@ -635,7 +622,6 @@ Players.PlayerAdded:Connect(function(plr)
 end)
 Players.PlayerRemoving:Connect(removeESP)
 
--- Render loop for nametags
 RunService.RenderStepped:Connect(function()
     if not espEnabled then return end
     for _, plr in ipairs(Players:GetPlayers()) do
@@ -663,9 +649,7 @@ RunService.RenderStepped:Connect(function()
                     local txt = tag:FindFirstChild("text")
                     if txt then
                         local parts = {}
-                        if espShowNames then
-                            table.insert(parts, plr.Name)
-                        end
+                        if espShowNames then table.insert(parts, plr.Name) end
                         if espShowDist and lp.Character and lp.Character:FindFirstChild("Head") then
                             local d = math.floor((head.Position - lp.Character.Head.Position).Magnitude)
                             table.insert(parts, "[" .. d .. "m]")
@@ -676,7 +660,6 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
-    -- cleanup lost tags
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= lp and plr.Character then
             local head = plr.Character:FindFirstChild("Head")
@@ -694,4 +677,11 @@ end)
 
 local function isSameTeam(plr)
     if not teamCheck then return false end
-    local myTeam =
+    local myTeam = lp.Team
+    return myTeam ~= nil and plr.Team == myTeam
+end
+
+local function isVisible(head)
+    if not wallCheck then return true end
+    local myHead = lp.Character and lp.Character:FindFirstChild("Head")
+   
