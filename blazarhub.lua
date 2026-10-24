@@ -1,4 +1,4 @@
---Kod @b3stew
+--Koder @b3stew
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -14,6 +14,8 @@ local espEnabled = false
 local espTeamCheck = true
 local espShowNames = true
 local espShowDist = false
+local espShowSkeleton = false
+local espShowBox = false
 local spinEnabled = false
 local spinSpeed = 15
 local flingEnabled = false
@@ -179,16 +181,29 @@ local function newPage()
     p.Position = UDim2.new(0, 10, 0, 10)
     p.BackgroundTransparency = 1
     p.Visible = false
+    
+    local scroll = Instance.new("ScrollingFrame", p)
+    scroll.Size = UDim2.new(1, 0, 1, 0)
+    scroll.BackgroundTransparency = 1
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 2
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    
+    local layout = Instance.new("UIListLayout", scroll)
+    layout.Padding = UDim.new(0, 10)
+    
+    p:SetAttribute("Scroll", scroll)
     return p
 end
 for _, name in ipairs({"General", "Combat", "Visuals", "Misc"}) do
     pages[name] = newPage()
 end
 
-local function createBox(parent, titleText, yPos)
-    local box = Instance.new("Frame", parent)
-    box.Size = UDim2.new(1, 0, 0, 0)
-    box.Position = UDim2.new(0, 0, 0, yPos)
+local function createBox(parent, titleText)
+    local scroll = parent:GetAttribute("Scroll")
+    local box = Instance.new("Frame", scroll)
+    box.Size = UDim2.new(1, -5, 0, 0)
     box.BackgroundTransparency = 1
     box.AutomaticSize = Enum.AutomaticSize.Y
     
@@ -319,11 +334,11 @@ local function addSlider(parent, labelText, minV, maxV, defaultV, callback)
     end)
 end
 
-local gBox1 = createBox(pages.General, "Flight", 0)
+local gBox1 = createBox(pages.General, "Flight")
 addToggle(gBox1, "Enable Flight (F5)", function(s) setFly(s) end)
 addSlider(gBox1, "Speed", 10, 2000, speed, function(v) speed = v end)
 
-local cBox1 = createBox(pages.Combat, "Aimbot", 0)
+local cBox1 = createBox(pages.Combat, "Aimbot")
 addToggle(cBox1, "Enable Aimbot", function(s) aimEnabled = s end)
 addSlider(cBox1, "FOV", 20, 400, aimFov, function(v) aimFov = v end)
 addSlider(cBox1, "Smoothness", 1, 100, math.floor(aimSmooth*100), function(v) aimSmooth = v/100 end)
@@ -354,25 +369,27 @@ bindBtn.MouseButton1Click:Connect(function()
     bindBtn.Text = "..."
 end)
 
-local cBox2 = createBox(pages.Combat, "Spinbot & Fling", 220)
+local cBox2 = createBox(pages.Combat, "Spinbot & Fling")
 addToggle(cBox2, "Enable Spinbot", function(s) spinEnabled = s end)
 addSlider(cBox2, "Spin Speed", 1, 60, spinSpeed, function(v) spinSpeed = v end)
 addToggle(cBox2, "Fling (all)", function(s) flingEnabled = s end)
 
-local vBox1 = createBox(pages.Visuals, "ESP Settings", 0)
+local vBox1 = createBox(pages.Visuals, "ESP Settings")
 addToggle(vBox1, "Enable ESP", function(s) espEnabled = s; if not s then clearESP() end end)
 addToggle(vBox1, "Team Check", function(s) espTeamCheck = s; if espEnabled then clearESP(); refreshESP() end end, true)
 addToggle(vBox1, "Show Names", function(s) espShowNames = s; if espEnabled then clearESP(); refreshESP() end end, true)
 addToggle(vBox1, "Show Distance", function(s) espShowDist = s; if espEnabled then clearESP(); refreshESP() end end, false)
+addToggle(vBox1, "Show Skeleton", function(s) espShowSkeleton = s; if espEnabled then clearESP(); refreshESP() end end, false)
+addToggle(vBox1, "Show Box", function(s) espShowBox = s; if espEnabled then clearESP(); refreshESP() end end, false)
 
-local mBox1 = createBox(pages.Misc, "Movement", 0)
+local mBox1 = createBox(pages.Misc, "Movement")
 addToggle(mBox1, "NoClip", function(s) noclipEnabled = s end)
 addToggle(mBox1, "Speed Walk", function(s) setSpeedWalk(s) end)
 addSlider(mBox1, "Walk Speed", 16, 200, speedWalkValue, function(v) speedWalkValue = v; if speedWalkEnabled then setSpeedWalk(true) end end)
 addToggle(mBox1, "Jump Power", function(s) setJumpPower(s) end)
 addSlider(mBox1, "Jump Power Value", 50, 500, jumpPowerValue, function(v) jumpPowerValue = v; if jumpPowerEnabled then setJumpPower(true) end end)
 
-local mBox2 = createBox(pages.Misc, "Player Target", 220)
+local mBox2 = createBox(pages.Misc, "Player Target")
 local selLbl = Instance.new("TextLabel", mBox2)
 selLbl.Size = UDim2.new(1, 0, 0, 20)
 selLbl.BackgroundTransparency = 1
@@ -459,7 +476,7 @@ createSmallBtn(btnRow, "Fling", 120, 50, function()
     end
 end)
 
-local mBox3 = createBox(pages.Misc, "Kick Client", 380)
+local mBox3 = createBox(pages.Misc, "Kick Client")
 local kickInput = Instance.new("TextBox", mBox3)
 kickInput.Size = UDim2.new(1, 0, 0, 24)
 kickInput.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
@@ -598,7 +615,7 @@ function clearESP()
         local char = plr.Character
         if char then
             for _, c in ipairs(char:GetChildren()) do
-                if c:IsA("BillboardGui") and c.Name == "esp_tag" then c:Destroy() end
+                if c:IsA("BillboardGui") and (c.Name == "esp_tag" or c.Name == "esp_box" or c.Name == "esp_skel") then c:Destroy() end
             end
         end
     end
@@ -626,7 +643,8 @@ RunService.RenderStepped:Connect(function()
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= lp and plr.Character and not isSameTeamEsp(plr) then
             local head = plr.Character:FindFirstChild("Head")
-            if head then
+            local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+            if head and hrp then
                 local tag = head:FindFirstChild("esp_tag")
                 if not tag and (espShowNames or espShowDist) then
                     tag = Instance.new("BillboardGui", head)
@@ -656,18 +674,21 @@ RunService.RenderStepped:Connect(function()
                         txt.Text = table.concat(parts, " ")
                     end
                 end
-            end
-        end
-    end
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= lp and plr.Character then
-            local head = plr.Character:FindFirstChild("Head")
-            if head then
-                local tag = head:FindFirstChild("esp_tag")
-                if tag then
-                    if isSameTeamEsp(plr) or (not espShowNames and not espShowDist) then
-                        tag:Destroy()
+
+                local box = hrp:FindFirstChild("esp_box")
+                if espShowBox then
+                    if not box then
+                        box = Instance.new("BoxHandleAdornment", hrp)
+                        box.Name = "esp_box"
+                        box.Adornee = hrp
+                        box.AlwaysOnTop = true
+                        box.Color3 = Color3.fromRGB(255, 0, 0)
+                        box.Transparency = 0.5
+                        box.Size = Vector3.new(4, 6, 4)
+                        box.ZIndex = 2
                     end
+                elseif box then
+                    box:Destroy()
                 end
             end
         end
