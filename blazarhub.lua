@@ -1,4 +1,3 @@
---Кодер: b3stew
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -642,60 +641,62 @@ end)
 Players.PlayerRemoving:Connect(removeESP)
 
 RunService.RenderStepped:Connect(function()
-    if not espEnabled then return end
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= lp and plr.Character and not isSameTeamEsp(plr) then
-            local head = plr.Character:FindFirstChild("Head")
-            local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
-            if head and hrp then
-                local tag = head:FindFirstChild("esp_tag")
-                if not tag and (espShowNames or espShowDist) then
-                    tag = Instance.new("BillboardGui", head)
-                    tag.Name = "esp_tag"
-                    tag.Size = UDim2.new(0, 200, 0, 50)
-                    tag.StudsOffset = Vector3.new(0, 2.5, 0)
-                    tag.AlwaysOnTop = true
-                    
-                    local txt = Instance.new("TextLabel", tag)
-                    txt.Size = UDim2.new(1, 0, 1, 0)
-                    txt.BackgroundTransparency = 1
-                    txt.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    txt.TextStrokeTransparency = 0
-                    txt.Font = Enum.Font.GothamMedium
-                    txt.TextSize = 12
-                    txt.Name = "text"
-                end
-                if tag then
-                    local txt = tag:FindFirstChild("text")
-                    if txt then
-                        local parts = {}
-                        if espShowNames then table.insert(parts, plr.Name) end
-                        if espShowDist and lp.Character and lp.Character:FindFirstChild("Head") then
-                            local d = math.floor((head.Position - lp.Character.Head.Position).Magnitude)
-                            table.insert(parts, "[" .. d .. "m]")
+    pcall(function()
+        if not espEnabled then return end
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= lp and plr.Character and not isSameTeamEsp(plr) then
+                local head = plr.Character:FindFirstChild("Head")
+                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                if head and hrp then
+                    local tag = head:FindFirstChild("esp_tag")
+                    if not tag and (espShowNames or espShowDist) then
+                        tag = Instance.new("BillboardGui", head)
+                        tag.Name = "esp_tag"
+                        tag.Size = UDim2.new(0, 200, 0, 50)
+                        tag.StudsOffset = Vector3.new(0, 2.5, 0)
+                        tag.AlwaysOnTop = true
+                        
+                        local txt = Instance.new("TextLabel", tag)
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.BackgroundTransparency = 1
+                        txt.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        txt.TextStrokeTransparency = 0
+                        txt.Font = Enum.Font.GothamMedium
+                        txt.TextSize = 12
+                        txt.Name = "text"
+                    end
+                    if tag then
+                        local txt = tag:FindFirstChild("text")
+                        if txt then
+                            local parts = {}
+                            if espShowNames then table.insert(parts, plr.Name) end
+                            if espShowDist and lp.Character and lp.Character:FindFirstChild("Head") then
+                                local d = math.floor((head.Position - lp.Character.Head.Position).Magnitude)
+                                table.insert(parts, "[" .. d .. "m]")
+                            end
+                            txt.Text = table.concat(parts, " ")
                         end
-                        txt.Text = table.concat(parts, " ")
                     end
-                end
 
-                local box = hrp:FindFirstChild("esp_box")
-                if espShowBox then
-                    if not box then
-                        box = Instance.new("BoxHandleAdornment", hrp)
-                        box.Name = "esp_box"
-                        box.Adornee = hrp
-                        box.AlwaysOnTop = true
-                        box.Color3 = Color3.fromRGB(255, 0, 0)
-                        box.Transparency = 0.5
-                        box.Size = Vector3.new(4, 6, 4)
-                        box.ZIndex = 2
+                    local box = hrp:FindFirstChild("esp_box")
+                    if espShowBox then
+                        if not box then
+                            box = Instance.new("BoxHandleAdornment", hrp)
+                            box.Name = "esp_box"
+                            box.Adornee = hrp
+                            box.AlwaysOnTop = true
+                            box.Color3 = Color3.fromRGB(255, 0, 0)
+                            box.Transparency = 0.5
+                            box.Size = Vector3.new(4, 6, 4)
+                            box.ZIndex = 2
+                        end
+                    elseif box then
+                        box:Destroy()
                     end
-                elseif box then
-                    box:Destroy()
                 end
             end
         end
-    end
+    end)
 end)
 
 local function isSameTeam(plr)
