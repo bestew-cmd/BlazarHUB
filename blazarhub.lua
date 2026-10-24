@@ -1,4 +1,3 @@
--- injector script — Drone War / Blazar HUB
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -42,7 +41,6 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = game:GetService("CoreGui")
 
--- Watermark
 local watermark = Instance.new("TextLabel", gui)
 watermark.Size = UDim2.new(0, 300, 0, 30)
 watermark.Position = UDim2.new(0.5, -150, 0, 50)
@@ -684,4 +682,127 @@ end
 local function isVisible(head)
     if not wallCheck then return true end
     local myHead = lp.Character and lp.Character:FindFirstChild("Head")
-   
+    if not myHead then return false end
+    local params = RaycastParams.new()
+    params.FilterDescendantsInstances = {lp.Character, head.Parent}
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    local result = Workspace:Raycast(myHead.Position, head.Position - myHead.Position, params)
+    return result == nil
+end
+
+local function getClosestTarget()
+    local myHead = lp.Character and lp.Character:FindFirstChild("Head")
+    if not myHead then return nil end
+    local closest, closestAngle = nil, aimFov
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= lp and plr.Character and not isSameTeam(plr) then
+            local head = plr.Character:FindFirstChild("Head")
+            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+            if head and hum and hum.Health > 0 and isVisible(head) then
+                local sp, _ = cam:WorldToViewportPoint(head.Position)
+                if sp.Z > 0 then
+                    local screenCenter = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
+                    local dist = (Vector2.new(sp.X, sp.Y) - screenCenter).Magnitude
+                    if dist < closestAngle then
+                        closestAngle = dist
+                        closest = head
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+function shutdown()
+    running = false
+    setFly(false); clearESP()
+    setSpeedWalk(false); setJumpPower(false)
+    if gui then gui:Destroy() end
+end
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if binding and input.KeyCode ~= Enum.KeyCode.Unknown then
+        aimKey = input.KeyCode
+        aimKeyName = input.KeyCode.Name
+        bindLbl.Text = "Aim Key: " .. aimKeyName
+        bindBtn.Text = "Set Bind"
+        binding = false
+        return
+    end
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.F5 then
+        setFly(not flyEnabled)
+    elseif input.KeyCode == Enum.KeyCode.F8 then
+        mainFrame.Visible = not mainFrame.Visible
+    end
+end)
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == aimKey then aimHeld = true end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == aimKey then aimHeld = false end
+end)
+
+local spinAngle = 0
+RunService.Heartbeat:Connect(function(dt)
+    if not running then return end
+    local root = getRoot()
+
+    if flyEnabled and bodyVel and part and part.Parent and root then
+        local x, y = 0, 0
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then y += 1 end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then y -= 1 end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then x += 1 end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then x -= 1 end
+
+        local cf = cam.CFrame
+        local look = Vector3.new(cf.LookVector.X, 0, cf.LookVector.Z)
+        local right = Vector3.new(cf.RightVector.X, 0, cf.RightVector.Z)
+        if look.Magnitude > 0 then look = look.Unit end
+        if right.Magnitude > 0 then right = right.Unit end
+
+        local dir = look * y + right * x
+        if dir.Magnitude > 1 then dir = dir.Unit end
+
+        local v = 0
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then v = 1 end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then v = -1 end
+
+        bodyVel.Velocity = dir * speed + Vector3.new(0, v * speed, 0)
+        bodyGyro.CFrame = CFrame.lookAt(part.Position, part.Position + look)
+    end
+
+    if aimEnabled and aimHeld then
+        local target = getClosestTarget()
+        if target then
+            local currentCF = cam.CFrame
+            local targetCF = CFrame.lookAt(currentCF.Position, target.Position)
+            cam.CFrame = currentCF:Lerp(targetCF, math.clamp(aimSmooth, 0.02, 1))
+        end
+    end
+
+    if spinEnabled and root then
+        spinAngle = (spinAngle + math.rad(spinSpeed * 60) * dt) % (math.pi * 2)
+        root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, spinAngle, 0)
+    end
+
+    if flingEnabled then
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= lp and plr.Character then
+                for _, p in ipairs(plr.Character:GetDescendants()) do
+                    if p:IsA("BasePart") then
+                        p.Velocity = Vector3.new(math.random(-1e5, 1e5), math.random(-1e5, 1e5), math.random(-1e5, 1e5))
+                    end
+                end
+            end
+        end
+    end
+end)
+
+lp.CharacterAdded:Connect(function()
+    setFly(false)
+    setSpeedWalk(false); setJumpPower(false)
+    if espEnabled then task.wait(0.3); createESP(lp) end
+end)
