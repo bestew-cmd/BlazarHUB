@@ -206,7 +206,7 @@ end
 local function createBox(parent, titleText)
     local scroll = parent:GetAttribute("Scroll")
     local box = Instance.new("Frame", scroll)
-    box.Size = UDim2.new(1, -5, 0, 0)
+    box.Size = UDim2.new(1, -10, 0, 0)
     box.BackgroundTransparency = 1
     box.AutomaticSize = Enum.AutomaticSize.Y
     
