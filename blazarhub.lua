@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
 
 local lp = Players.LocalPlayer
 local cam = Workspace.CurrentCamera
@@ -13,7 +14,6 @@ local espEnabled = false
 local espTeamCheck = true
 local espShowNames = true
 local espShowDist = false
-local espShowBox = false
 local spinEnabled = false
 local spinSpeed = 15
 local flingEnabled = false
@@ -31,7 +31,7 @@ local aimFov = 120
 local aimSmooth = 0.3
 local teamCheck = true
 local wallCheck = true
-local selectedPlayer = nil
+local isMenuOpen = false
 
 local bodyVel, bodyGyro, part
 local espCache = {}
@@ -41,6 +41,36 @@ gui.Name = "blazarhub_menu"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = game:GetService("CoreGui")
+
+local loadingFrame = Instance.new("Frame", gui)
+loadingFrame.Size = UDim2.new(1, 0, 1, 0)
+loadingFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+loadingFrame.BackgroundTransparency = 1
+loadingFrame.ZIndex = 100
+
+local loadingText = Instance.new("TextLabel", loadingFrame)
+loadingText.Size = UDim2.new(0, 400, 0, 80)
+loadingText.Position = UDim2.new(0.5, -200, 0.5, -40)
+loadingText.BackgroundTransparency = 1
+loadingText.Text = ""
+loadingText.TextColor3 = Color3.fromRGB(100, 180, 255)
+loadingText.Font = Enum.Font.GothamBlack
+loadingText.TextSize = 40
+loadingText.ZIndex = 101
+
+local function playLoadingAnim()
+    loadingFrame.BackgroundTransparency = 0
+    local str = "Blazar HUB"
+    for i = 1, #str do
+        loadingText.Text = str:sub(1, i)
+        task.wait(0.08)
+    end
+    task.wait(0.3)
+    TweenService:Create(loadingText, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+    TweenService:Create(loadingFrame, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
+    task.wait(0.4)
+    loadingFrame:Destroy()
+end
 
 local watermark = Instance.new("TextLabel", gui)
 watermark.Size = UDim2.new(0, 200, 0, 30)
@@ -73,12 +103,13 @@ task.spawn(function()
 end)
 
 local mainFrame = Instance.new("Frame", gui)
-mainFrame.Size = UDim2.new(0, 720, 0, 480)
+mainFrame.Size = UDim2.new(0, 720, 0, 520)
 mainFrame.Position = UDim2.new(0, 50, 0, 50)
 mainFrame.BackgroundColor3 = Color3.fromRGB(12, 16, 26)
 mainFrame.BorderSizePixel = 0
 mainFrame.Visible = false
 mainFrame.Active = true
+mainFrame.BackgroundTransparency = 1
 
 local stroke = Instance.new("UIStroke", mainFrame)
 stroke.Color = Color3.fromRGB(25, 35, 50)
@@ -184,29 +215,16 @@ local function newPage()
     p.Position = UDim2.new(0, 10, 0, 10)
     p.BackgroundTransparency = 1
     p.Visible = false
-    
-    local scroll = Instance.new("ScrollingFrame", p)
-    scroll.Size = UDim2.new(1, 0, 1, 0)
-    scroll.BackgroundTransparency = 1
-    scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 2
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    
-    local layout = Instance.new("UIListLayout", scroll)
-    layout.Padding = UDim.new(0, 10)
-    
-    p:SetAttribute("Scroll", scroll)
     return p
 end
 for _, name in ipairs({"General", "Combat", "Visuals", "Misc"}) do
     pages[name] = newPage()
 end
 
-local function createBox(parent, titleText)
-    local scroll = parent:GetAttribute("Scroll")
-    local box = Instance.new("Frame", scroll)
-    box.Size = UDim2.new(1, -10, 0, 0)
+local function createBox(parent, titleText, yPos)
+    local box = Instance.new("Frame", parent)
+    box.Size = UDim2.new(1, 0, 0, 0)
+    box.Position = UDim2.new(0, 0, 0, yPos)
     box.BackgroundTransparency = 1
     box.AutomaticSize = Enum.AutomaticSize.Y
     
@@ -337,11 +355,11 @@ local function addSlider(parent, labelText, minV, maxV, defaultV, callback)
     end)
 end
 
-local gBox1 = createBox(pages.General, "Flight")
+local gBox1 = createBox(pages.General, "Flight", 0)
 addToggle(gBox1, "Enable Flight (F5)", function(s) setFly(s) end)
 addSlider(gBox1, "Speed", 10, 2000, speed, function(v) speed = v end)
 
-local cBox1 = createBox(pages.Combat, "Aimbot")
+local cBox1 = createBox(pages.Combat, "Aimbot", 0)
 addToggle(cBox1, "Enable Aimbot", function(s) aimEnabled = s end)
 addSlider(cBox1, "FOV", 20, 400, aimFov, function(v) aimFov = v end)
 addSlider(cBox1, "Smoothness", 1, 100, math.floor(aimSmooth*100), function(v) aimSmooth = v/100 end)
@@ -372,113 +390,25 @@ bindBtn.MouseButton1Click:Connect(function()
     bindBtn.Text = "..."
 end)
 
-local cBox2 = createBox(pages.Combat, "Spinbot & Fling")
+local cBox2 = createBox(pages.Combat, "Spinbot & Fling", 250)
 addToggle(cBox2, "Enable Spinbot", function(s) spinEnabled = s end)
 addSlider(cBox2, "Spin Speed", 1, 60, spinSpeed, function(v) spinSpeed = v end)
 addToggle(cBox2, "Fling (all)", function(s) flingEnabled = s end)
 
-local vBox1 = createBox(pages.Visuals, "ESP Settings")
+local vBox1 = createBox(pages.Visuals, "ESP Settings", 0)
 addToggle(vBox1, "Enable ESP", function(s) espEnabled = s; if not s then clearESP() end end)
 addToggle(vBox1, "Team Check", function(s) espTeamCheck = s; if espEnabled then clearESP(); refreshESP() end end, true)
 addToggle(vBox1, "Show Names", function(s) espShowNames = s; if espEnabled then clearESP(); refreshESP() end end, true)
 addToggle(vBox1, "Show Distance", function(s) espShowDist = s; if espEnabled then clearESP(); refreshESP() end end, false)
-addToggle(vBox1, "Show Box", function(s) espShowBox = s; if espEnabled then clearESP(); refreshESP() end end, false)
 
-local mBox1 = createBox(pages.Misc, "Movement")
+local mBox1 = createBox(pages.Misc, "Movement", 0)
 addToggle(mBox1, "NoClip", function(s) noclipEnabled = s end)
 addToggle(mBox1, "Speed Walk", function(s) setSpeedWalk(s) end)
 addSlider(mBox1, "Walk Speed", 16, 200, speedWalkValue, function(v) speedWalkValue = v; if speedWalkEnabled then setSpeedWalk(true) end end)
 addToggle(mBox1, "Jump Power", function(s) setJumpPower(s) end)
 addSlider(mBox1, "Jump Power Value", 50, 500, jumpPowerValue, function(v) jumpPowerValue = v; if jumpPowerEnabled then setJumpPower(true) end end)
 
-local mBox2 = createBox(pages.Misc, "Player Target")
-local selLbl = Instance.new("TextLabel", mBox2)
-selLbl.Size = UDim2.new(1, 0, 0, 20)
-selLbl.BackgroundTransparency = 1
-selLbl.Text = "Target: none"
-selLbl.TextColor3 = Color3.fromRGB(180, 180, 190)
-selLbl.Font = Enum.Font.Gotham; selLbl.TextSize = 12
-selLbl.TextXAlignment = Enum.TextXAlignment.Left
-
-local btnRow = Instance.new("Frame", mBox2)
-btnRow.Size = UDim2.new(1, 0, 0, 20)
-btnRow.BackgroundTransparency = 1
-
-local function createSmallBtn(parent, text, xPos, w, callback)
-    local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.new(0, w, 1, 0)
-    b.Position = UDim2.new(0, xPos, 0, 0)
-    b.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
-    b.BorderSizePixel = 0
-    b.Text = text
-    b.TextColor3 = Color3.fromRGB(180, 180, 190)
-    b.Font = Enum.Font.Gotham; b.TextSize = 11
-    b.MouseButton1Click:Connect(callback)
-    return b
-end
-
-local listFrame = Instance.new("Frame", contentArea)
-listFrame.Size = UDim2.new(0, 200, 0, 220)
-listFrame.Position = UDim2.new(1, -220, 0, 10)
-listFrame.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
-listFrame.BorderSizePixel = 0
-listFrame.Visible = false
-local listStroke = Instance.new("UIStroke", listFrame)
-listStroke.Color = Color3.fromRGB(25, 35, 50)
-
-local listScroll = Instance.new("ScrollingFrame", listFrame)
-listScroll.Size = UDim2.new(1, -10, 1, -10)
-listScroll.Position = UDim2.new(0, 5, 0, 5)
-listScroll.BackgroundTransparency = 1
-listScroll.BorderSizePixel = 0
-listScroll.ScrollBarThickness = 2
-local listLayout = Instance.new("UIListLayout", listScroll)
-listLayout.Padding = UDim.new(0, 2)
-
-local function refreshList()
-    for _, c in ipairs(listScroll:GetChildren()) do
-        if c:IsA("TextButton") then c:Destroy() end
-    end
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= lp then
-            local b = Instance.new("TextButton", listScroll)
-            b.Size = UDim2.new(1, 0, 0, 24)
-            b.BackgroundColor3 = Color3.fromRGB(20, 30, 50)
-            b.BorderSizePixel = 0
-            b.Text = "  " .. plr.Name
-            b.TextColor3 = Color3.fromRGB(200, 200, 210)
-            b.Font = Enum.Font.Gotham; b.TextSize = 12
-            b.TextXAlignment = Enum.TextXAlignment.Left
-            b.MouseButton1Click:Connect(function()
-                selectedPlayer = plr
-                selLbl.Text = "Target: " .. plr.Name
-                listFrame.Visible = false
-            end)
-        end
-    end
-    listScroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y)
-end
-
-createSmallBtn(btnRow, "Select", 0, 60, function()
-    listFrame.Visible = not listFrame.Visible
-    if listFrame.Visible then refreshList() end
-end)
-createSmallBtn(btnRow, "TP", 70, 40, function()
-    if selectedPlayer and selectedPlayer.Character and lp.Character then
-        local t = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local m = lp.Character:FindFirstChild("HumanoidRootPart")
-        if t and m then m.CFrame = t.CFrame * CFrame.new(0, 3, 0) end
-    end
-end)
-createSmallBtn(btnRow, "Fling", 120, 50, function()
-    if selectedPlayer and selectedPlayer.Character then
-        for _, p in ipairs(selectedPlayer.Character:GetDescendants()) do
-            if p:IsA("BasePart") then p.Velocity = Vector3.new(math.random(-1e5, 1e5), math.random(-1e5, 1e5), math.random(-1e5, 1e5)) end
-        end
-    end
-end)
-
-local mBox3 = createBox(pages.Misc, "Kick Client")
+local mBox3 = createBox(pages.Misc, "Kick Client", 200)
 local kickInput = Instance.new("TextBox", mBox3)
 kickInput.Size = UDim2.new(1, 0, 0, 24)
 kickInput.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
@@ -493,7 +423,15 @@ kickInput.FocusLost:Connect(function()
     kickMessage = (kickInput.Text ~= "") and kickInput.Text or "Kick :D"
     kickInput.Text = kickMessage
 end)
-createSmallBtn(mBox3, "Kick", 0, 60, function() lp:Kick(kickMessage) end).Size = UDim2.new(0, 60, 0, 24)
+
+local kickBtn = Instance.new("TextButton", mBox3)
+kickBtn.Size = UDim2.new(0, 60, 0, 24)
+kickBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
+kickBtn.BorderSizePixel = 0
+kickBtn.Text = "Kick"
+kickBtn.TextColor3 = Color3.fromRGB(180, 180, 190)
+kickBtn.Font = Enum.Font.Gotham; kickBtn.TextSize = 11
+kickBtn.MouseButton1Click:Connect(function() lp:Kick(kickMessage) end)
 
 tabButtons.Exit.MouseButton1Click:Connect(function() shutdown() end)
 for n, b in pairs(tabButtons) do
@@ -502,6 +440,12 @@ for n, b in pairs(tabButtons) do
             for nn, bb in pairs(tabButtons) do
                 if nn ~= "Exit" then
                     pages[nn].Visible = (nn == n)
+                    
+                    if nn == n then
+                        pages[nn].Position = UDim2.new(0, 10, 0, 30)
+                        TweenService:Create(pages[nn], TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 10, 0, 10)}):Play()
+                    end
+
                     bb.BackgroundColor3 = (nn == n) and Color3.fromRGB(20, 30, 50) or Color3.fromRGB(8, 10, 16)
                     bb.TextColor3 = (nn == n) and Color3.fromRGB(100, 180, 255) or Color3.fromRGB(140, 140, 150)
                     for _, c in ipairs(bb:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
@@ -617,7 +561,7 @@ function clearESP()
         local char = plr.Character
         if char then
             for _, c in ipairs(char:GetChildren()) do
-                if c:IsA("BillboardGui") and (c.Name == "esp_tag" or c.Name == "esp_box") then c:Destroy() end
+                if c:IsA("BillboardGui") and c.Name == "esp_tag" then c:Destroy() end
             end
         end
     end
@@ -641,62 +585,56 @@ end)
 Players.PlayerRemoving:Connect(removeESP)
 
 RunService.RenderStepped:Connect(function()
-    pcall(function()
-        if not espEnabled then return end
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= lp and plr.Character and not isSameTeamEsp(plr) then
-                local head = plr.Character:FindFirstChild("Head")
-                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
-                if head and hrp then
-                    local tag = head:FindFirstChild("esp_tag")
-                    if not tag and (espShowNames or espShowDist) then
-                        tag = Instance.new("BillboardGui", head)
-                        tag.Name = "esp_tag"
-                        tag.Size = UDim2.new(0, 200, 0, 50)
-                        tag.StudsOffset = Vector3.new(0, 2.5, 0)
-                        tag.AlwaysOnTop = true
-                        
-                        local txt = Instance.new("TextLabel", tag)
-                        txt.Size = UDim2.new(1, 0, 1, 0)
-                        txt.BackgroundTransparency = 1
-                        txt.TextColor3 = Color3.fromRGB(255, 255, 255)
-                        txt.TextStrokeTransparency = 0
-                        txt.Font = Enum.Font.GothamMedium
-                        txt.TextSize = 12
-                        txt.Name = "text"
-                    end
-                    if tag then
-                        local txt = tag:FindFirstChild("text")
-                        if txt then
-                            local parts = {}
-                            if espShowNames then table.insert(parts, plr.Name) end
-                            if espShowDist and lp.Character and lp.Character:FindFirstChild("Head") then
-                                local d = math.floor((head.Position - lp.Character.Head.Position).Magnitude)
-                                table.insert(parts, "[" .. d .. "m]")
-                            end
-                            txt.Text = table.concat(parts, " ")
+    if not espEnabled then return end
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= lp and plr.Character and not isSameTeamEsp(plr) then
+            local head = plr.Character:FindFirstChild("Head")
+            if head then
+                local tag = head:FindFirstChild("esp_tag")
+                if not tag and (espShowNames or espShowDist) then
+                    tag = Instance.new("BillboardGui", head)
+                    tag.Name = "esp_tag"
+                    tag.Size = UDim2.new(0, 200, 0, 50)
+                    tag.StudsOffset = Vector3.new(0, 2.5, 0)
+                    tag.AlwaysOnTop = true
+                    
+                    local txt = Instance.new("TextLabel", tag)
+                    txt.Size = UDim2.new(1, 0, 1, 0)
+                    txt.BackgroundTransparency = 1
+                    txt.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    txt.TextStrokeTransparency = 0
+                    txt.Font = Enum.Font.GothamMedium
+                    txt.TextSize = 12
+                    txt.Name = "text"
+                end
+                if tag then
+                    local txt = tag:FindFirstChild("text")
+                    if txt then
+                        local parts = {}
+                        if espShowNames then table.insert(parts, plr.Name) end
+                        if espShowDist and lp.Character and lp.Character:FindFirstChild("Head") then
+                            local d = math.floor((head.Position - lp.Character.Head.Position).Magnitude)
+                            table.insert(parts, "[" .. d .. "m]")
                         end
-                    end
-
-                    local box = hrp:FindFirstChild("esp_box")
-                    if espShowBox then
-                        if not box then
-                            box = Instance.new("BoxHandleAdornment", hrp)
-                            box.Name = "esp_box"
-                            box.Adornee = hrp
-                            box.AlwaysOnTop = true
-                            box.Color3 = Color3.fromRGB(255, 0, 0)
-                            box.Transparency = 0.5
-                            box.Size = Vector3.new(4, 6, 4)
-                            box.ZIndex = 2
-                        end
-                    elseif box then
-                        box:Destroy()
+                        txt.Text = table.concat(parts, " ")
                     end
                 end
             end
         end
-    end)
+    end
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= lp and plr.Character then
+            local head = plr.Character:FindFirstChild("Head")
+            if head then
+                local tag = head:FindFirstChild("esp_tag")
+                if tag then
+                    if isSameTeamEsp(plr) or (not espShowNames and not espShowDist) then
+                        tag:Destroy()
+                    end
+                end
+            end
+        end
+    end
 end)
 
 local function isSameTeam(plr)
@@ -747,6 +685,23 @@ function shutdown()
     if gui then gui:Destroy() end
 end
 
+local function toggleMenu()
+    if isMenuOpen then
+        isMenuOpen = false
+        local tw = TweenService:Create(mainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1})
+        tw:Play()
+        tw.Completed:Connect(function()
+            if not isMenuOpen then
+                mainFrame.Visible = false
+            end
+        end)
+    else
+        isMenuOpen = true
+        mainFrame.Visible = true
+        TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+    end
+end
+
 UserInputService.InputBegan:Connect(function(input, processed)
     if binding and input.KeyCode ~= Enum.KeyCode.Unknown then
         aimKey = input.KeyCode
@@ -760,7 +715,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
     if input.KeyCode == Enum.KeyCode.F5 then
         setFly(not flyEnabled)
     elseif input.KeyCode == Enum.KeyCode.F8 then
-        mainFrame.Visible = not mainFrame.Visible
+        toggleMenu()
     end
 end)
 UserInputService.InputBegan:Connect(function(input, processed)
@@ -769,6 +724,14 @@ UserInputService.InputBegan:Connect(function(input, processed)
 end)
 UserInputService.InputEnded:Connect(function(input)
     if input.KeyCode == aimKey then aimHeld = false end
+end)
+
+task.spawn(function()
+    task.wait(0.1)
+    playLoadingAnim()
+    isMenuOpen = true
+    mainFrame.Visible = true
+    TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
 end)
 
 local spinAngle = 0
