@@ -1,4 +1,3 @@
--- injector script — Drone War / Blazar HUB (Neverlose UI style + watermark + esp custom)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -7,7 +6,6 @@ local Workspace = game:GetService("Workspace")
 local lp = Players.LocalPlayer
 local cam = Workspace.CurrentCamera
 
--- state
 local running = true
 local speed = 120
 local flyEnabled = false
@@ -44,7 +42,6 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = game:GetService("CoreGui")
 
--- Watermark
 local watermark = Instance.new("TextLabel", gui)
 watermark.Size = UDim2.new(0, 300, 0, 30)
 watermark.Position = UDim2.new(0.5, -150, 0, 50) -- top center
@@ -55,7 +52,6 @@ watermark.Font = Enum.Font.GothamMedium
 watermark.TextSize = 14
 watermark.TextStrokeTransparency = 1
 
--- FPS counter logic
 task.spawn(function()
     local frames = 0
     local lastTime = tick()
