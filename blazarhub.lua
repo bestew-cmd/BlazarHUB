@@ -1,4 +1,4 @@
---Koder @b3stew
+--Кодер: b3stew
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -14,7 +14,6 @@ local espEnabled = false
 local espTeamCheck = true
 local espShowNames = true
 local espShowDist = false
-local espShowSkeleton = false
 local espShowBox = false
 local spinEnabled = false
 local spinSpeed = 15
@@ -384,7 +383,6 @@ addToggle(vBox1, "Enable ESP", function(s) espEnabled = s; if not s then clearES
 addToggle(vBox1, "Team Check", function(s) espTeamCheck = s; if espEnabled then clearESP(); refreshESP() end end, true)
 addToggle(vBox1, "Show Names", function(s) espShowNames = s; if espEnabled then clearESP(); refreshESP() end end, true)
 addToggle(vBox1, "Show Distance", function(s) espShowDist = s; if espEnabled then clearESP(); refreshESP() end end, false)
-addToggle(vBox1, "Show Skeleton", function(s) espShowSkeleton = s; if espEnabled then clearESP(); refreshESP() end end, false)
 addToggle(vBox1, "Show Box", function(s) espShowBox = s; if espEnabled then clearESP(); refreshESP() end end, false)
 
 local mBox1 = createBox(pages.Misc, "Movement")
